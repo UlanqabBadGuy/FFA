@@ -7,6 +7,17 @@ if (!requireNamespace("pheatmap", quietly = TRUE)) {
   install.packages("pheatmap")
 }
 
+# 安装并加载所需的包
+install.packages("ggplot2")
+install.packages("reshape2")
+install.packages("RColorBrewer")
+install.packages("corrplot")
+
+library(corrplot)
+library(ggplot2)
+library(reshape2)
+library(RColorBrewer)
+
 library(pheatmap)
 # 加载包
 library(mice)    # 多重插补
@@ -77,6 +88,83 @@ aggr_plot <- aggr(temp_data, col = c('navyblue', 'red'),
 # 因此在后面的操作中，我们需要过滤掉除了这三列之外的有缺失值的记录
 # 那么对于（id_13  id_05  id_06）前面比例大于5%的列，我们需要用mice进行多重插补
 # 需要知道id_13  id_05  id_06与其他属性的相关性
+
+temp_data_1 <- temp_data[!is.na(temp_data$V310) & !is.na(temp_data$V311) & !is.na(temp_data$V312),]
+# 此时temp_data_1代表去掉了V310,V311和V312中有缺失值的行
+# 类似的，我们要对removal的数据集进行处理了
+# 第一步，删除了V310,V311和V312中有缺失值的行
+step1 <- data_after_removeal[!is.na(data_after_removeal$V310) & !is.na(data_after_removeal$V311) & !is.na(data_after_removeal$V312),]
+
+# C5 C9全是0，没什么作用，如果一列属性的值几乎全是0，那么这个特征的变异性几乎为零，
+# 实际上它对分析和模型的影响可能非常有限，甚至可能引入噪音。因此，移除这类特征通常是合理的，
+# 假设要移除的列名是 col1 和 col2
+step1 <- step1 %>%
+  select(-C5, -C9)
+
+# 第二步，mice插值
+# 选择数值型变量
+numeric_data <- step1[sapply(step1, is.numeric)]
+# 检测分类变量（唯一值少于阈值，如10）
+categorical_data <- data %>%
+  select_if(~ n_distinct(.) <= 100 & is.character(.) | is.factor(.))
+
+# 计算数值型变量的相关性
+cor_matrix <- cor(numeric_data, use = "complete.obs")
+# 将相关性矩阵转化为长格式
+cor_melted <- melt(cor_matrix)
+
+# 绘制热图
+ggplot(cor_melted, aes(Var1, Var2, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), axis.text.y = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Correlation Heatmap", x = "Variables", y = "Variables")
+
+numeric_cols <- names(numeric_data)
+categorical_cols <- names(categorical_data)
+
+step1$categorical_cols <- as.factor(step1$categorical_cols)
+step1$numeric_cols <- as.numeric(step1$numeric_cols)
+
+# 检查每一列的类型
+sapply(numeric_data, class)
+# 检查无穷值（Inf）和缺失值（NA）
+sum(is.na(numeric_data))  # 统计缺失值的数量
+
+sum(is.infinite(numeric_data))  # 统计无穷值的数量
+
+# 将无穷值替换为NA
+numeric_data[is.infinite(numeric_data)] <- NA
+
+# 进行PCA
+pca <- prcomp(numeric_data, center = TRUE, scale. = TRUE)
+pca_data <- pca$x  # 取主成分
+# 使用主成分进行插补
+step2 <- mice(pca_data, m = 5, maxit = 5, method = 'pmm', seed = 500)
+
+# 根据关系热力图我们可以看到某些数据之间的关系如何
+# 缺失值列包含 
+# Variable   Count
+# id_20 0.03415
+# id_19 0.03374
+# id_17 0.03337
+# id_02 0.02276
+# id_11 0.02203
+# id_35 0.02196
+# id_36 0.02196
+# id_37 0.02196
+# id_38 0.02196
+# card2 0.00688
+# card5 0.00660
+# D1 0.00155
+# V313 0.00155
+# V314 0.00155
+# card3 0.00115
+
+
+
+step2 <- mice(step1, m = 5, method = 'pmm', maxit = 5, seed = 500)
 
 
 target_vars <- c("id_13", "id_05", "id_06")
