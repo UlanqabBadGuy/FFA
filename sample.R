@@ -30,6 +30,49 @@ library(dplyr)   # 数据操作
 # Load the data
 data = read.csv("A1_data.csv")
 
+# 2.探索数据集结构
+print("structure of dataset")
+str(A1_data)
+print("summary statistics")
+summary(A1_data)
+print("proportion of isFraud's class")
+table(A1_data$isFraud)/length(A1_data$isFraud)
+
+
+# 3.单变量分析
+# 绘制isFraud的分布情况（柱状图）
+ggplot(A1_data, aes(x = as.factor(isFraud))) +
+  geom_bar(width = 0.3, fill = "cyan", color = "cyan") +  # 使用颜色填充和边框
+  theme_minimal() +                              # 极简主题
+  labs(title = "Distribution of isFraud", x = "Category", y = "Count") +
+  theme(plot.title = element_text(hjust = 0.5, size = 16),  # 标题居中，设置字体大小
+        axis.text.x = element_text(size = 12),     # x轴字体大小
+        axis.text.y = element_text(size = 12)) +   # y轴字体大小
+  geom_text(stat = "count", aes(label = ..count..), vjust = -0.5)  # 在柱子上显示数量
+
+
+########################## 对数值型变量的研究
+numeric_data <- select_if(A1_data, is.numeric)  # 提取出数值型变量
+
+# 将数值型变量的数据转化为长格式
+melted_numeric_data <- melt(numeric_data)  # 生成的列统称value
+
+ggplot(melted_numeric_data, aes(x = value)) +
+  geom_histogram(fill = "cyan", color = "cyan", bins = 30) +
+  facet_wrap(~ variable, scales = "free") +  # 每个变量一个图，坐标轴独立
+  theme_minimal() +
+  labs(title = "Distribution of Numeric Variables", 
+       x = "Values", 
+       y = "Frequency") +
+  theme(
+    plot.title = element_text(hjust = 0.1),  # 调整标题位置
+    axis.text.x = element_text(size = 6),    # 调整横坐标文本大小
+    axis.text.y = element_text(size = 6)     # 调整纵坐标文本大小
+  )
+
+
+
+
 # 检查整体缺失情况
 cat("Total missing values:", sum(is.na(data)), "\n")
 
