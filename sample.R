@@ -1,23 +1,19 @@
 # This is a sample R script for assignment 1.
 
-# 安装必要的包（如果尚未安装）
-install.packages(c("mice", "VIM", "naniar", "DescTools"))
-# 安装并加载pheatmap
-if (!requireNamespace("pheatmap", quietly = TRUE)) {
-  install.packages("pheatmap")
-}
-
 # 安装并加载所需的包
+install.packages(c("mice", "VIM", "naniar", "DescTools"))
 install.packages("ggplot2")
 install.packages("reshape2")
 install.packages("RColorBrewer")
 install.packages("corrplot")
+install.packages("caret")
+install.packages("pheatmap")
 
 library(corrplot)
 library(ggplot2)
 library(reshape2)
 library(RColorBrewer)
-
+library(caret)
 library(pheatmap)
 # 加载包
 library(mice)    # 多重插补
@@ -31,17 +27,17 @@ library(dplyr)   # 数据操作
 data = read.csv("A1_data.csv")
 
 # 2.探索数据集结构
-print("structure of dataset")
-str(A1_data)
-print("summary statistics")
-summary(A1_data)
+# print("structure of dataset")
+# str(data)
+# print("summary statistics")
+# summary(data)
 print("proportion of isFraud's class")
-table(A1_data$isFraud)/length(A1_data$isFraud)
+table(data$isFraud)/length(data$isFraud)
 
 
 # 3.单变量分析
 # 绘制isFraud的分布情况（柱状图）
-ggplot(A1_data, aes(x = as.factor(isFraud))) +
+ggplot(data, aes(x = as.factor(isFraud))) +
   geom_bar(width = 0.3, fill = "cyan", color = "cyan") +  # 使用颜色填充和边框
   theme_minimal() +                              # 极简主题
   labs(title = "Distribution of isFraud", x = "Category", y = "Count") +
@@ -51,24 +47,7 @@ ggplot(A1_data, aes(x = as.factor(isFraud))) +
   geom_text(stat = "count", aes(label = ..count..), vjust = -0.5)  # 在柱子上显示数量
 
 
-########################## 对数值型变量的研究
-numeric_data <- select_if(A1_data, is.numeric)  # 提取出数值型变量
 
-# 将数值型变量的数据转化为长格式
-melted_numeric_data <- melt(numeric_data)  # 生成的列统称value
-
-ggplot(melted_numeric_data, aes(x = value)) +
-  geom_histogram(fill = "cyan", color = "cyan", bins = 30) +
-  facet_wrap(~ variable, scales = "free") +  # 每个变量一个图，坐标轴独立
-  theme_minimal() +
-  labs(title = "Distribution of Numeric Variables", 
-       x = "Values", 
-       y = "Frequency") +
-  theme(
-    plot.title = element_text(hjust = 0.1),  # 调整标题位置
-    axis.text.x = element_text(size = 6),    # 调整横坐标文本大小
-    axis.text.y = element_text(size = 6)     # 调整纵坐标文本大小
-  )
 
 
 
@@ -100,7 +79,7 @@ threshold <- 42.881
 columns_to_keep <- names(missing_percentage[missing_percentage < threshold])
 
 # 创建一个新的数据集，删除缺失值比例大于阈值的列
-data_after_removeal <- data[, columns_to_keep]
+data_after_removeal <- data[columns_to_keep]
 
 # 使用data_after_removeal继续操作
 new_missing_counts <- colSums(is.na(data_after_removeal))
@@ -140,77 +119,149 @@ step1 <- data_after_removeal[!is.na(data_after_removeal$V310) & !is.na(data_afte
 
 # C5 C9全是0，没什么作用，如果一列属性的值几乎全是0，那么这个特征的变异性几乎为零，
 # 实际上它对分析和模型的影响可能非常有限，甚至可能引入噪音。因此，移除这类特征通常是合理的，
-# 假设要移除的列名是 col1 和 col2
 step1 <- step1 %>%
   select(-C5, -C9)
 
 # 第二步，mice插值
-# 选择数值型变量
-numeric_data <- step1[sapply(step1, is.numeric)]
-# 检测分类变量（唯一值少于阈值，如10）
-categorical_data <- data %>%
-  select_if(~ n_distinct(.) <= 100 & is.character(.) | is.factor(.))
 
+########################## 对数值型变量的研究
+numeric_data <- select_if(step1, is.numeric)  # 提取出数值型变量
+
+# 将数值型变量的数据转化为长格式
+melted_numeric_data <- melt(numeric_data)  # 生成的列统称value
+
+ggplot(melted_numeric_data, aes(x = value)) +
+  geom_histogram(fill = "cyan", color = "cyan", bins = 30) +
+  facet_wrap(~ variable, scales = "free") +  # 每个变量一个图，坐标轴独立
+  theme_minimal() +
+  labs(title = "Distribution of Numeric Variables", 
+       x = "Values", 
+       y = "Frequency") +
+  theme(
+    plot.title = element_text(hjust = 0.1),  # 调整标题位置
+    axis.text.x = element_text(size = 8),    # 调整横坐标文本大小
+    axis.text.y = element_text(size = 8)     # 调整纵坐标文本大小
+  )
+
+
+
+##### 检测数值型变量间的相关系数
 # 计算数值型变量的相关性
-cor_matrix <- cor(numeric_data, use = "complete.obs")
+cor_matrix_numeric <- cor(numeric_data, use = "complete.obs")
 # 将相关性矩阵转化为长格式
-cor_melted <- melt(cor_matrix)
-
+corr1 <- melt(cor_matrix_numeric) # 按两两匹配方式排出缺失值的影响
+# corrplot(corr1)
+# title(main = "Correlation Coefficient of Numeric Variables", line = -3, adj = 0.55)  # 给热力图添加一个标题
 # 绘制热图
-ggplot(cor_melted, aes(Var1, Var2, fill = value)) +
+ggplot(corr1, aes(Var1, Var2, fill = value)) +
   geom_tile() +
   scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1), axis.text.y = element_text(angle = 45, hjust = 1)) +
-  labs(title = "Correlation Heatmap", x = "Variables", y = "Variables")
+  labs(title = "Correlation Coefficient of Numeric Variables", x = "Variables", y = "Variables")
 
-numeric_cols <- names(numeric_data)
-categorical_cols <- names(categorical_data)
 
-step1$categorical_cols <- as.factor(step1$categorical_cols)
-step1$numeric_cols <- as.numeric(step1$numeric_cols)
+########################## 对分类型变量的研究
+category_data <- step1 %>% select_if(~ !is.numeric(.)) # 提取出所有类别型变量
 
+# 将分类型变量的数据转化为长格式
+melted_category_data <- melt(category_data, id.vars = NULL, na.rm = FALSE)  # 不指定 id.vars，将所有列视为度量变量，同时忽略缺失值
+
+
+# 绘制所有分类变量的分布条形图，使用 facet_wrap() 将它们整合在一张图中
+ggplot(melted_category_data, aes(x = value)) +
+  geom_bar(fill = "cyan", color = "black") +
+  facet_wrap(~ variable, scales = "free", ncol = 5) +  # 每个变量一个图，坐标轴独立
+  theme_minimal() +
+  labs(title = "Distribution of Discrete Variables", x = "Category", y = "Count") +
+  theme(plot.title = element_text(hjust = 0.1),
+        axis.text.x = element_text(size = 7),   # 调整横坐标文本大小
+        axis.text.y = element_text(size = 7) 
+  )   # 调整纵坐标文本大小
+
+
+
+
+
+# 选择数值型变量
+# numeric_data <- step1[sapply(step1, is.numeric)]
+# 检测分类变量（唯一值少于阈值，如10）
+# categorical_data <- data %>%
+#   select_if(~ n_distinct(.) <= 100 & is.character(.) | is.factor(.))
+
+# 计算数值型变量的相关性
+# cor_matrix <- cor(numeric_data, use = "complete.obs")
+# 将相关性矩阵转化为长格式
+# cor_melted <- melt(cor_matrix)
+
+# 绘制热图
+# ggplot(cor_melted, aes(Var1, Var2, fill = value)) +
+#   geom_tile() +
+#   scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0) +
+#   theme_minimal() +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1), axis.text.y = element_text(angle = 45, hjust = 1)) +
+#   labs(title = "Correlation Heatmap", x = "Variables", y = "Variables")
+
+# numeric_cols <- names(numeric_data)
+# categorical_cols <- names(categorical_data)
+
+# step1$categorical_cols <- as.factor(step1$categorical_cols)
+# step1$numeric_cols <- as.numeric(step1$numeric_cols)
+
+############################################# 数值型变量分析
 # 检查每一列的类型
 sapply(numeric_data, class)
+# 检查数值型变量的缺失值情况
+sort(colSums(is.na(numeric_data)),decreasing = TRUE)
 # 检查无穷值（Inf）和缺失值（NA）
 sum(is.na(numeric_data))  # 统计缺失值的数量
 
-sum(is.infinite(numeric_data))  # 统计无穷值的数量
+sum(is.infinite(unlist(numeric_data)))  # 统计无穷值的数量
 
-# 将无穷值替换为NA
-numeric_data[is.infinite(numeric_data)] <- NA
+# 将数值变量的无穷值转为NA
+step1 <- step1 %>%
+  mutate(across(where(is.numeric), ~ replace(., is.infinite(.), NA)))
 
-# 进行PCA
-pca <- prcomp(numeric_data, center = TRUE, scale. = TRUE)
-pca_data <- pca$x  # 取主成分
-# 使用主成分进行插补
-step2 <- mice(pca_data, m = 5, maxit = 5, method = 'pmm', seed = 500)
+# 将字符型变量的空字符串转为NA
+# step1 <- step1 %>%
+#   mutate(across(where(is.character), ~ na_if(., "")))
 
-# 根据关系热力图我们可以看到某些数据之间的关系如何
-# 缺失值列包含 
-# Variable   Count
-# id_20 0.03415
-# id_19 0.03374
-# id_17 0.03337
-# id_02 0.02276
-# id_11 0.02203
-# id_35 0.02196
-# id_36 0.02196
-# id_37 0.02196
-# id_38 0.02196
-# card2 0.00688
-# card5 0.00660
-# D1 0.00155
-# V313 0.00155
-# V314 0.00155
-# card3 0.00115
+
+# 数值型变量的缺失值列包含 
+# id_13                id_05                id_06 
+# id_20                id_19                id_17 
+# id_02                id_11                card2 
+# card5                   D1                 V313 
+# V314                card3        TransactionID 
+
+##########################################################
 
 
 
-step2 <- mice(step1, m = 5, method = 'pmm', maxit = 5, seed = 500)
+##############################################分类型变量
+# 检查每一列的类型
+sapply(category_data, class)
+# 检查分类型变量的缺失值情况
+sort(colSums(is.na(category_data)),decreasing = TRUE)
+# 检查无穷值（Inf）和缺失值（NA）
+sum(is.na(category_data))  # 统计缺失值的数量
+
+sum(is.infinite(unlist(category_data)))  # 统计无穷值的数量
+
+# 将字符型变量的空字符串转为NA
+step1 <- step1 %>%
+  mutate(across(where(is.character), ~ na_if(., "")))
+
+# 分类型变量的缺失值列包含 
+# id_35         id_36         id_37         id_38
+
+##########################################################
+
+##############################################进行一个相关性分析，来决定谁与谁来插值
 
 
-target_vars <- c("id_13", "id_05", "id_06")
+
+
 
 
 # Exploratory Data Analysis
