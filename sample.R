@@ -239,34 +239,34 @@ step1 <- step1 %>%
 
 # 运行 MICE 插补（默认方法为 "pmm"：预测均值匹配）
 # 对id进行mice插补
-selected_columns_idstep1 <- step1[, c("id_13", "id_05", "id_06", "id_20", "id_19", "id_17", "id_02", "id_11")]
+selected_columns_idstep1 <- step1[, c("id_13", "id_05", "id_06", "id_20")]
 # 转换成因子形式，以顺利进行mice
 selected_columns_idstep1$id_13 <- factor(selected_columns_idstep1$id_13)
 selected_columns_idstep1$id_05 <- factor(selected_columns_idstep1$id_05)
 selected_columns_idstep1$id_06 <- factor(selected_columns_idstep1$id_06)
 selected_columns_idstep1$id_20 <- factor(selected_columns_idstep1$id_20)
-selected_columns_idstep1$id_19 <- factor(selected_columns_idstep1$id_19)
-selected_columns_idstep1$id_17 <- factor(selected_columns_idstep1$id_17)
-selected_columns_idstep1$id_02 <- factor(selected_columns_idstep1$id_02)
-selected_columns_idstep1$id_11 <- factor(selected_columns_idstep1$id_11)
+#selected_columns_idstep1$id_19 <- factor(selected_columns_idstep1$id_19)
+#selected_columns_idstep1$id_17 <- factor(selected_columns_idstep1$id_17)
+#selected_columns_idstep1$id_02 <- factor(selected_columns_idstep1$id_02)
+#selected_columns_idstep1$id_11 <- factor(selected_columns_idstep1$id_11)
 # 使用 MICE 进行插补
 # 这里使用 m = 5 表示生成5个插补数据集，根据不同数据类型选用不同的method参数
-mice_idstep1 <- mice(selected_columns_idstep1, m = 5, method = c('polyreg', 'logreg', 'logreg', 'logreg', 'polyreg', 'logreg', 'logreg', 'logreg'), seed = 123)
+mice_idstep1 <- mice(selected_columns_idstep1, m = 5, method = c('pmm', 'pmm', 'pmm', 'pmm'), seed = 123)
 # 查看插补结果的摘要
 summary(mice_idstep1)
 # 提取插补后的完整数据集,并插回原数据集
 completed_idstep1 <- complete(mice_idstep1)
-step1[, c("id_13", "id_05", "id_06", "id_20", "id_19", "id_17", "id_02", "id_11")] <- completed_idstep1
+step1[, c("id_13", "id_05", "id_06", "id_20")] <- completed_idstep1
 
 # 再从因子型变量转换为字符型变量
 A1_data2$id_13 <- as.integer(step1$id_13)
 A1_data2$id_05 <- as.integer(step1$id_05)
 A1_data2$id_06 <- as.integer(step1$id_06)
 A1_data2$id_20 <- as.integer(step1$id_20)
-A1_data2$id_19 <- as.integer(step1$id_19)
-A1_data2$id_17 <- as.integer(step1$id_17)
-A1_data2$id_02 <- as.integer(step1$id_02)
-A1_data2$id_11 <- as.numeric(step1$id_11)
+#A1_data2$id_19 <- as.integer(step1$id_19)
+#A1_data2$id_17 <- as.integer(step1$id_17)
+#A1_data2$id_02 <- as.integer(step1$id_02)
+#A1_data2$id_11 <- as.numeric(step1$id_11)
 
 ##########################################################
 
