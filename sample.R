@@ -239,35 +239,69 @@ step1 <- step1 %>%
 
 # 运行 MICE 插补（默认方法为 "pmm"：预测均值匹配）
 # 对id进行mice插补
-selected_columns_idstep1 <- step1[, c("id_13", "id_05", "id_06", "id_20")]
+selected_columns_id1 <- step1[, c("id_13", "id_05", "id_06", "id_20")]
 # 转换成因子形式，以顺利进行mice
-selected_columns_idstep1$id_13 <- factor(selected_columns_idstep1$id_13)
-selected_columns_idstep1$id_05 <- factor(selected_columns_idstep1$id_05)
-selected_columns_idstep1$id_06 <- factor(selected_columns_idstep1$id_06)
-selected_columns_idstep1$id_20 <- factor(selected_columns_idstep1$id_20)
-#selected_columns_idstep1$id_19 <- factor(selected_columns_idstep1$id_19)
-#selected_columns_idstep1$id_17 <- factor(selected_columns_idstep1$id_17)
-#selected_columns_idstep1$id_02 <- factor(selected_columns_idstep1$id_02)
-#selected_columns_idstep1$id_11 <- factor(selected_columns_idstep1$id_11)
+selected_columns_id1$id_13 <- factor(selected_columns_id1$id_13)
+selected_columns_id1$id_05 <- factor(selected_columns_id1$id_05)
+selected_columns_id1$id_06 <- factor(selected_columns_id1$id_06)
+selected_columns_id1$id_20 <- factor(selected_columns_id1$id_20)
+
 # 使用 MICE 进行插补
 # 这里使用 m = 5 表示生成5个插补数据集，根据不同数据类型选用不同的method参数
-mice_idstep1 <- mice(selected_columns_idstep1, m = 5, method = c('pmm', 'pmm', 'pmm', 'pmm'), seed = 123)
+mice_id1 <- mice(selected_columns_id1, m = 5, method = c('pmm', 'pmm', 'pmm', 'pmm'), seed = 123)
 # 查看插补结果的摘要
-summary(mice_idstep1)
+summary(mice_id1)
+plot(mice_id1)
 # 提取插补后的完整数据集,并插回原数据集
-completed_idstep1 <- complete(mice_idstep1)
-step1[, c("id_13", "id_05", "id_06", "id_20")] <- completed_idstep1
+completed_id1 <- complete(mice_id1)
+step1[, c("id_13", "id_05", "id_06", "id_20")] <- completed_id1
 
 # 再从因子型变量转换为字符型变量
-A1_data2$id_13 <- as.integer(step1$id_13)
-A1_data2$id_05 <- as.integer(step1$id_05)
-A1_data2$id_06 <- as.integer(step1$id_06)
-A1_data2$id_20 <- as.integer(step1$id_20)
-#A1_data2$id_19 <- as.integer(step1$id_19)
-#A1_data2$id_17 <- as.integer(step1$id_17)
-#A1_data2$id_02 <- as.integer(step1$id_02)
-#A1_data2$id_11 <- as.numeric(step1$id_11)
+step1$id_13 <- as.integer(step1$id_13)
+step1$id_05 <- as.integer(step1$id_05)
+step1$id_06 <- as.integer(step1$id_06)
+step1$id_20 <- as.integer(step1$id_20)
 
+selected_columns_id2 <- step1[, c("id_19", "id_17")]
+selected_columns_id3 <- step1[, c("id_02", "id_11")]
+
+selected_columns_id2$id_19 <- factor(selected_columns_id2$id_19)
+selected_columns_id2$id_17 <- factor(selected_columns_id2$id_17)
+selected_columns_id3$id_02 <- factor(selected_columns_id3$id_02)
+selected_columns_id3$id_11 <- factor(selected_columns_id3$id_11)
+# 使用 MICE 进行插补
+mice_id2 <- mice(selected_columns_id2, m = 3, method = c('pmm', 'pmm'), seed = 123)
+mice_id3 <- mice(selected_columns_id3, m = 3, method = c('pmm', 'pmm'), seed = 123)
+
+# 查看插补结果的摘要
+summary(mice_id2)
+summary(mice_id3)
+# 提取插补后的完整数据集,并插回原数据集
+completed_id2 <- complete(mice_id2)
+completed_id3 <- complete(mice_id3)
+step1[, c("id_19", "id_17")] <- completed_id2
+step1[, c("id_02", "id_11")] <- completed_id3
+
+step1$id_19 <- as.integer(step1$id_19)
+step1$id_17 <- as.integer(step1$id_17)
+step1$id_02 <- as.integer(step1$id_02)
+step1$id_11 <- as.numeric(step1$id_11)
+
+
+### 对card2的数值分布进行高频值按比例随机插补
+frequents_card2 <- table(step1$card2)  # 计算card2中每个值的频率
+sorted_card2 <- sort(frequents_card2, decreasing = TRUE)  # 按频率降序排列，找到最常见的值
+head(sorted_card2, n = 5)  # 取前5个频率最高的值
+
+### 对card3的数值分布进行高频值按比例随机插补
+frequents_card3 <- table(step1$card3)  # 计算card2中每个值的频率
+sorted_card3 <- sort(frequents_card3, decreasing = TRUE)  # 按频率降序排列，找到最常见的值
+head(sorted_card3, n = 5)  # 取前5个频率最高的值
+
+### 对card5的数值分布进行高频值按比例随机插补
+frequents_card5 <- table(step1$card5)  # 计算card2中每个值的频率
+sorted_card5 <- sort(frequents_card5, decreasing = TRUE)  # 按频率降序排列，找到最常见的值
+head(sorted_card5, n = 5)  # 取前5个频率最高的值
 ##########################################################
 
 
